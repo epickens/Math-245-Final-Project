@@ -7,7 +7,7 @@ library(survey)
 library(ggformula)
 library(sandwich)
 
-nba <- read_excel("UPDATEDTEAMDATA.xlsx")
+nba <- read_excel("updatedteamdata3.xlsx")
 scatterplotMatrix(nba)
 
 #Some EDA
@@ -66,9 +66,9 @@ hur.stepBk <- stepAIC(mod.hur, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP
 summary(hur.stepBk)
 
 #No off or def rating
-hur.full <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf, data = nba, dist = "poisson")
+hur.full <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "poisson")
 summary(hur.full)
-hur.BK <-stepAIC(hur.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "backward", k = log(nrow(prin_data)))
+hur.BK <-stepAIC(hur.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both", k = log(nrow(prin_data)))
 summary(hur.BK)
 
 hur.fwd <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "forward", k = log(nrow(prin_data)))
@@ -79,7 +79,7 @@ summary(hur.AIC)
 
 #Try negbin dist instead of poisson
 
-mod.negbin <- hurdle(Playoff_Wins ~ FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "negbin")
+mod.negbin <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "negbin")
 summary(mod.negbin)
 negbin.basic <- hurdle(Playoff_Wins ~ 1, data = nba, dist = "negbin")
 
@@ -87,16 +87,16 @@ negbin.step <- stepAIC(negbin.basic, scope = list(lower = ~ 1, upper = ~ TwoP + 
 summary(negbin.step)
 
 #No off or def rating included 
-negbin.full <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf, data = nba, dist = "negbin")
+negbin.full <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "negbin")
 summary(negbin.full)
-negbin.BK <-stepAIC(negbin.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "backward", k = log(nrow(prin_data)))
+negbin.BK <-stepAIC(negbin.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both", k = log(nrow(prin_data)))
 summary(negbin.BK)
 
 #Looks like negbin is not going to be useful in this case
 
 #Check zeroinfl model
 
-mod.zero <- zeroinfl(Playoff_Wins ~ FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "poisson")
+mod.zero <- zeroinfl(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "poisson")
 summary(mod.zero)
 zero.basic <- zeroinfl(Playoff_Wins ~ 1, data = nba, dist = "poisson")
 
@@ -106,9 +106,9 @@ summary(zero.step)
 
 #No off or def rating included 
 #the four lines below are error prone 
-zero.full <- zeroinfl(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf, data = nba, dist = "poisson")
+zero.full <- zeroinfl(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "poisson")
 summary(zero.full)
-zero.BK <-stepAIC(zero.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "backward", k = log(nrow(prin_data)))
+zero.BK <-stepAIC(zero.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both", k = log(nrow(prin_data)))
 summary(zero.BK)
 
 #quick manual fit (for some function testing)
@@ -117,9 +117,11 @@ summary(zero.test)
 
 #fit testing for: zero.BK zero.step hur.BK hur.step
 
-AIC <- c(AIC(zero.BK), AIC(zero.step), AIC(hur.BK), AIC(hur.step))
+AIC <- c(AIC(zero.BK), AIC(zero.step), AIC(negbin.step), AIC(negbin.BK), AIC(hur.BK), AIC(hur.step))
 plot(AIC)
 
+Loglik <- c(zero.BK$loglik, zero.step$loglik, negbin.step$loglik, negbin.BK$loglik, hur.BK$loglik, hur.step$loglik)
+plot(Loglik)
 
 
 #More PCA stuff (begin using PCA to create a predictive model)
