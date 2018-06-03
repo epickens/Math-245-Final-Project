@@ -13,6 +13,7 @@ scatterplotMatrix(nba)
 #Some EDA
 
 plot(sort(nba$Playoff_Wins))
+gf_histogram(~Playoff_Wins, data = nba)
 
 #Regular Poisson
 
@@ -47,7 +48,7 @@ pca <- PCA(nba[5:14])
 pca$var$coord
 pca$ind$coord
 
-#start fitting hurdle models
+#start fitting hurdle models using BIC
 
 mod.hur <- hurdle(Playoff_Wins ~ FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "poisson")
 summary(mod.hur)
@@ -74,10 +75,18 @@ summary(hur.BK)
 hur.fwd <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "forward", k = log(nrow(prin_data)))
 summary(hur.fwd)
 
+hur.bw <- stepAIC(hur.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "backward", k = log(nrow(prin_data)))
+summary(hur.fwd)
+
+#Re-Fit the model using AIC
+
 hur.AIC <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both")
 summary(hur.AIC)
 
-#Try negbin dist instead of poisson
+hur.FAIC <- stepAIC(hur.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both")
+summary(hur.FAIC)
+
+#Try negbin dist instead of poisson (BIC)
 
 mod.negbin <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "negbin")
 summary(mod.negbin)
@@ -94,7 +103,7 @@ summary(negbin.BK)
 
 #Looks like negbin is not going to be useful in this case
 
-#Check zeroinfl model
+#Check zeroinfl model (BIC)
 
 mod.zero <- zeroinfl(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "poisson")
 summary(mod.zero)
@@ -117,12 +126,79 @@ summary(zero.test)
 
 #fit testing for: zero.BK zero.step hur.BK hur.step
 
-AIC <- c(AIC(zero.BK), AIC(zero.step), AIC(negbin.step), AIC(negbin.BK), AIC(hur.BK), AIC(hur.step))
-plot(AIC)
+BIC <- c(AIC(zero.BK), AIC(zero.step), AIC(negbin.step), AIC(negbin.BK), AIC(hur.BK), AIC(hur.step))
+plot(BIC)
 
 Loglik <- c(zero.BK$loglik, zero.step$loglik, negbin.step$loglik, negbin.BK$loglik, hur.BK$loglik, hur.step$loglik)
 plot(Loglik)
 
+#Check for interactions
+
+hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
+                                             + Off_Eff*Conf + Def_Rtg*Conf + PF*Conf + TOV*Conf + BLK*Conf + STL*Conf + AST*Conf + FT*Conf + DRB*Conf + ORB*Conf + ThreeP*Conf + TwoP*Conf), direction = "both", k = log(nrow(prin_data)))
+
+hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
+                                             + Off_Eff*Conf + Off_Eff*Def_Rtg + Off_Eff*PF + Off_Eff*TOV + Off_Eff*BLK + Off_Eff*STL + Off_Eff*AST + Off_Eff*FT + Off_Eff*DRB + Off_Eff*ORB + Off_Eff*ThreeP + Off_Eff*TwoP), direction = "both", k = log(nrow(prin_data)))
+
+hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
+                                             + Off_Eff*Conf + Def_Rtg*PF + Def_Rtg*TOV + Def_Rtg*BLK + Def_Rtg*STL + Def_Rtg*AST + Def_Rtg*FT + Def_Rtg*DRB + Def_Rtg*ORB + Def_Rtg*ThreeP + Def_Rtg*TwoP), direction = "both", k = log(nrow(prin_data)))
+
+hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
+                                             + Off_Eff*Conf + PF*TOV + PF*BLK + PF*AST + PF*FT + PF*DRB + PF*ORB + PF*ThreeP + PF*TwoP), direction = "both", k = log(nrow(prin_data)))
+
+hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
+                                             + Off_Eff*Conf + TOV*BLK + TOV*STL + TOV*AST + TOV*FT + TOV*ORB + TOV*DRB + TOV*ThreeP + TOV*TwoP), direction = "both", k = log(nrow(prin_data)))
+
+hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
+                                             + Off_Eff*Conf + BLK*STL + BLK*AST + BLK*FT + BLK*DRB + BLK*ORB + BLK*ThreeP + BLK*TwoP), direction = "both", k = log(nrow(prin_data)))
+
+hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
+                                             + Off_Eff*Conf + STL*AST + STL*FT + STL*DRB + STL*ORB + STL*ThreeP + STL*TwoP), direction = "both", k = log(nrow(prin_data)))
+
+hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
+                                             + Off_Eff*Conf + AST*FT + AST*DRB + AST*ORB + AST*ThreeP + AST*TwoP), direction = "both", k = log(nrow(prin_data)))
+
+hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
+                                             + Off_Eff*Conf + FT*DRB + FT*ORB + FT*ThreeP + FT*TwoP), direction = "both", k = log(nrow(prin_data)))
+
+hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
+                                             + Off_Eff*Conf + DRB*ORB + DRB*ThreeP + DRB*TwoP), direction = "both", k = log(nrow(prin_data)))
+
+hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
+                                             + Off_Eff*Conf + ORB*ThreeP + ORB*TwoP + ThreeP*TwoP), direction = "both", k = log(nrow(prin_data)))
+
+#summary of interaction model (I removed all of summaries I had inbetween each model re-fitting) 
+summary(hur.inter)
+summary(hur.full)
+#It looks like Conf*Off_Eff might be significant
+
+#Inspect the models more closely
+hur.Finter <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff + Off_Eff*Conf, data = nba, dist = "poisson")
+
+#Permutation test significance
+
+numSim <- 1000
+result <- numeric(numSim)
+for (i in 1:numSim) {
+  tempData <- nba[sample(nrow(nba), size = 85),]
+  mod.red <- hurdle(Playoff_Wins ~ Off_Eff + Def_Rtg +Conf + STL + TOV + Off_Eff*Conf, data = tempData, dist = "poisson")
+  mod.f <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff + Off_Eff*Conf, data = tempData, dist = "poisson") 
+  pVal <- pchisq(2*(mod.f$loglik - mod.red$loglik), df = 16, lower.tail = FALSE)
+  result[i] <- pVal
+  rm(tempData)
+}
+summary(result)
+gf_histogram(~result)
+
+
+#Check BIC and LogLik graphs once again
+
+
+BIC <- c(AIC(zero.BK), AIC(zero.step), AIC(negbin.step), AIC(negbin.BK), AIC(hur.BK), AIC(hur.step), AIC(hur.inter))
+plot(BIC)
+
+Loglik <- c(zero.BK$loglik, zero.step$loglik, negbin.step$loglik, negbin.BK$loglik, hur.BK$loglik, hur.step$loglik, hur.inter$loglik)
+plot(Loglik)
 
 #More PCA stuff (begin using PCA to create a predictive model)
 
