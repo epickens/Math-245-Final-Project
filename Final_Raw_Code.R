@@ -58,6 +58,8 @@ summary(mod.nb)
 #Now we will take a look at some models that can hopefully handle the large number of zeros in our data
 #The model types that we will investigate are the hurdle and zero inflated model
 
+
+
 #testing zero inflated model
 
 mod <- zeroinfl(Playoff_Wins ~ DRB, data = nba, dist = "negbin")
@@ -244,3 +246,15 @@ prin.step <- stepAIC(prin.mod, scale = list(lower = ~ 1, upper = ~ Comp.1 + Comp
 
 summary(prin.step)
 
+
+##Our Working Model
+OURMODEL <- hurdle(Playoff_Wins ~ Off_Eff+Def_Rtg+Conf+STL+TOV+Off_Eff*Conf,data=nba,dist="poisson")
+##Log-Likelihood testing against saturated Model, our model is more significant
+pchisq(2*(logLik(mod.hurd)-logLik(OURMODEL)),df=16,lower.tail=FALSE)
+summary(OURMODEL)
+##Extracting Std. Errors
+out$coefficients$count[,2]
+out$coefficients$zero[,2]
+predict(OURMODEL,type="count")
+##Correlation Table Data
+table <- cor(correlationdata)
