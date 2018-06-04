@@ -262,3 +262,55 @@ out$coefficients$zero[,2]
 predict(OURMODEL,type="count")
 ##Correlation Table Data
 table <- cor(correlationdata)
+
+##COUNT CI bands:
+resultslower <- numeric(7)
+resultsupper <- numeric(7)
+for(k in 1:7){
+
+N <- 1000
+result <- numeric(N)
+for(i in 1:N){
+  tempdata <- noteaminfo[sample(nrow(noteaminfo),size=81),]
+  testhurdle <- hurdle(Playoff_Wins~Off_Eff+Def_Rtg+Conf+STL+TOV+Conf*Off_Eff,data=tempdata,dist="poisson")
+  tempout <- summary(testhurdle)
+    result[i] <- tempout$coefficients$count[k,1]
+  
+  
+}
+result <- sort(result)
+
+resultslower[k] <- result[25]
+resultsupper[k] <- result[975]
+
+}
+resultslower
+resultsupper
+
+
+
+##Zero CI Bands:
+
+Zeroresultslower <- numeric(7)
+Zeroresultsupper <- numeric(7)
+for(k in 1:7){
+
+N <- 1000
+Zeroresult <- numeric(N)
+for(i in 1:N){
+  tempdata <- noteaminfo[sample(nrow(noteaminfo),size=81),]
+  testhurdle <- hurdle(Playoff_Wins~Off_Eff+Def_Rtg+Conf+STL+TOV+Conf*Off_Eff,data=tempdata,dist="poisson")
+  tempout <- summary(testhurdle)
+    Zeroresult[i] <- tempout$coefficients$zero[k,1]
+  
+  
+}
+Zeroresult <- sort(Zeroresult)
+
+Zeroresultslower[k] <- Zeroresult[25]
+Zeroresultsupper[k] <- Zeroresult[975]
+
+}
+Zeroresultslower
+Zeroresultsupper
+
