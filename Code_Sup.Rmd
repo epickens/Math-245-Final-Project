@@ -269,7 +269,7 @@ pchisq(2*(hur.Finter$loglik - hur.inter$loglik), df = 16, lower.tail = FALSE)
 ```
 
 #Our model isn't looking too bad, but lets use a puesdo cross validation approach to see if our model
-#is more significant than the "full" model when we look at a random 9/10ths of the data
+#is more significant than the "full" model when we look at a random 9/10ths of the data 
 
 ```{r}
 numSim <- 1000
@@ -285,6 +285,62 @@ for (i in 1:numSim) {
 summary(result)
 gf_histogram(~result)
 ```
+
+#Now we are going to use the puesdo cross validation approach to get estimates for our coefficients
+
+```{r}
+##COUNT CI bands:
+resultslower <- numeric(7)
+resultsupper <- numeric(7)
+for(k in 1:7){
+
+  N <- 1000
+  result <- numeric(N)
+  for(i in 1:N){
+    tempdata <- nba[sample(nrow(nba),size=81),]
+    testhurdle <- hurdle(Playoff_Wins~Off_Eff+Def_Rtg+Conf+STL+TOV+Conf*Off_Eff,data=tempdata,dist="poisson")
+    tempout <- summary(testhurdle)
+    result[i] <- tempout$coefficients$count[k,1]
+    
+    
+  }
+  result <- sort(result)
+  
+  resultslower[k] <- result[25]
+  resultsupper[k] <- result[975]
+
+}
+resultslower
+resultsupper
+
+
+
+##Zero CI Bands:
+
+Zeroresultslower <- numeric(7)
+Zeroresultsupper <- numeric(7)
+for(k in 1:7){
+
+  N <- 1000
+  Zeroresult <- numeric(N)
+  for(i in 1:N){
+    tempdata <- nba[sample(nrow(nba),size=81),]
+    testhurdle <- hurdle(Playoff_Wins~Off_Eff+Def_Rtg+Conf+STL+TOV+Conf*Off_Eff,data=tempdata,dist="poisson")
+    tempout <- summary(testhurdle)
+    Zeroresult[i] <- tempout$coefficients$zero[k,1]
+    
+    
+  }
+  Zeroresult <- sort(Zeroresult)
+  
+  Zeroresultslower[k] <- Zeroresult[25]
+  Zeroresultsupper[k] <- Zeroresult[975]
+
+}
+Zeroresultslower
+Zeroresultsupper
+```
+
 
 #Re-do the AIC and loglik graphs with the interaction model
 
