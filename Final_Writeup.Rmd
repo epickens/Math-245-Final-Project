@@ -1,0 +1,47 @@
+---
+title: "Final_Writeup"
+author: "Elliot Pickens & Andrew Lin & Matt Thill"
+date: "June 4, 2018"
+header-includes:
+   - \usepackage{setspace}
+   - \doublespacing
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Predicting Playoff Wins in the NBA
+
+Andrew Lin, Elliot Pickens, & Matt Thill
+
+#Abstract 
+
+\ \ \ \ \ The authors were interested in using regular season NBA data to try predicting some outcome of postseason success. The authors decided to try predicting the number of playoff wins a team can expect to earn based on their regular season statistics. The authors were also interested in determining how significant regular season success, measured in regular season statistics, is in predicting a team’s success in the postseason. There is much talk, especially in recent years, that the NBA regular season is not taken seriously by teams who know that they are going to make it to the playoffs. Showing that there is a strong correlation between regular season statistics and postseason success would hopefully make an argument for directing attention to the regular season as a means of predicting the outcomes of the postseason. The authors experimented with both the zero-inflated model and the hurdle model to come up with the best prediction of postseason success. After using model selection techniques to come up with the model that best fit the data, it was determined that a hurdle model with predictors for offensive efficiency, defensive rating, steals, turnovers, conference, and an interaction term for offensive efficiency on conference was the best choice for the job. This model gives insight into what predictors are significant in determining which teams will gain a nonzero number of playoff wins (which would occur if a team made it to the postseason and did not get swept in the first round) and how many games a team can expect to win given they attain a nonzero number of playoff wins.
+
+#Introduction
+
+\ \ \ \ \ The problem of interest in this report will be what variables and what model best predict a NBA team’s success, measured by the number of playoff wins attained, in the postseason. The NBA regular season is not necessarily indicative of the level of play a team is capable of. Things like lineup experimentation and resting star players can impact a team’s regular season record but may tell little of how well a team is capable of performing in the postseason. But how well does aggregate regular season performance correlate with playoff success? What types of teams are more successful in the NBA postseason? Questions like whether or not a more defensively minded team or an offensively minded team will be more successful in the postseason are important questions that would have a substantial effect on the way a franchise would build a roster to compete for championships and make deep postseason runs. 
+Previous studies have been done similar to the study the researchers desire to conduct including the report “How to Win in the NBA Playoffs: A Statistical Analysis” by Michael R. Summers. His study found that defensive rebounds and field goal percentage are most correlated with winning a playoff game. Another similar study done took into account a team’s payroll in predicting an NBA team’s season success and found that an increase in payroll lead to greater odds of making the playoffs.
+
+#Data
+
+\ \ \ \ \ The data collected for analysis included NBA regular season statistics grouped by the team associated with those statistics. The data used for the final model selection included variables for games played, minutes played, three point baskets, two point baskets, free throws, offensive rebounds, defensive rebounds, assists, steals, blocks, turnovers, personal fouls, defensive rating, offensive efficiency, and play off wins. A categorical variable for what conference a team competed, either ‘east’ or ‘west,’ was also included in the data. This data was gathered for the 2014-2015, 2015-2016, and 2016-2017 NBA seasons and was taken from the NBA statistics, ESPN, Basketball References. It is important to note that the predictors took the aggregate number of each respective stat accumulated by a team during the entire regular season. \newline
+\ \ \ \ \ Although data gathered was taken across multiple seasons, the author’s included all observations in one data set with no indicator as to which season the data was taken from. This was done to expand the number of observations in the data set in a way that simplified the analysis and model selection procedure. In doing this, the authors assumed that the observations and the results taken across each season are identically distributed and independent. While this assumption may not be completely true, the authors felt that this was a necessary simplifying assumption to make in order to gather sufficient data for analysis. While a team’s overall performance in the regular season may be impacted by the result of the previous season, the authors are solely concerned with how the success of a team in the regular season correlates with the success of a team in the postseason. Because of this, the authors had no need to take into account what factors affect the success of a team in the regular season. This assumption resolves issues regarding trades, injuries, or other confounding variables between seasons in association with a previous season’s outcome. Without this assumption, the authors would have been limited to thirty observations which would likely have been an insufficient amount of data.
+
+#Results
+
+\ \ \ \ \ The final model that the researchers determined to be the best fit for the data utilized a hurdle model with six predictors. The researchers considered and explored a number of possible models to best answer how NBA regular season success measures the success in the postseason including the poisson regression model, the zero-inflated model, and, the model that ended up being used, the hurdle model. The hurdle model is a two part model composed of two separate operations for zero count observations and for positive counts. The term hurdle is used to describe the model because positive counts begin to appear within the data after a particular threshold or hurdle is crossed. The observations are treated as binary count data until this particular threshold is crossed. \newline
+\ \ \ \ \ The reason the hurdle model was used was to take into account the large number of zero observations recorded in team playoff wins due to the fact that only sixteen of thirty NBA teams make the playoffs each season. The researchers first considered the poisson regression model before realizing that the 
+
+#Discussion
+
+#References
+“Basketball Statistics and History.” Basketball-Reference. N.p. N.d. Web. 04 June 2018.
+"NBA Stats." NBA Stats. N.p., n.d. Web. 04 June 2018.
+Summers, Michael R. "How to Win in the NBA Playoffs: A Statistical Analysis." American               Journal of Management 13.3 (n.d.): n. pag. Pepperdine University, 2013. Web. 2 June            2018.
+
+Appendix (this is optional, include additional graphics if interesting)
+
+Notes: Potential source of error is if we don’t include conference we are not adjusting for the possibility that one conference is much weaker and teams could accumulate more aggregate 3p, 2p, assists, etc. Same for not adjusting for the number of minutes played

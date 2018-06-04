@@ -1,20 +1,63 @@
-library(readxl)
+---
+title: "Final Project Code Sup"
+author: "Elliot Pickens & Andrew Lin & Matt Thill"
+date: "June 4, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(Sleuth3)
+library(dplyr)
+library(ggformula)
+library(pander)
+library(knitr)
+library(stargazer)
 library(car)
+library(pander)
+library(gridExtra)
+library(broom)
+library(ggthemes)
+library(MASS)
+library(leaps)
+library(GGally)
+library(aod)
+library(sandwich)
 library(pscl)
 library(FactoMineR)
-library(MASS)
+library(readxl)
 library(survey)
-library(ggformula)
-library(sandwich)
+```
 
+## Load the Data 
+```{r}
 nba <- read_excel("updatedteamdata3.xlsx")
-scatterplotMatrix(nba)
+```
 
-#Some EDA
+##EDA
 
+#Inspect the data
+
+```{r}
+summary(nba)
+which(is.na(nba))
+#no NA values
+```
+
+
+#Let's take a look that the counts that we are trying to model
+
+```{r}
 plot(sort(nba$Playoff_Wins))
 gf_histogram(~Playoff_Wins, data = nba)
+```
 
+##Start by trying to fit a poisson model
+
+```{r}
 #Regular Poisson
 basic.pois <- glm(Playoff_Wins ~ 1, data = nba, family = poisson)
 reg.pois <- glm(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, family = "poisson", data = nba)
@@ -35,6 +78,11 @@ summary(mod.pois)
 #Check fit again
 1 - pchisq(165.14, 84)
 #The more significant model is a poor fit based in this test
+```
+
+##Maybe a quasipoisson model will be better...
+
+```{r}
 
 #Maybe we should try quasipoisson to account for the problems we are having with the regular poisson model
 
@@ -48,6 +96,11 @@ new.quasi <- glm(Playoff_Wins ~ Off_Eff + Def_Rtg + Conf + TwoP + ThreeP, data =
 residualPlots(new.quasi, type = "deviance", tests = FALSE)
 #These are better but several of the plots have large (< -2 and > 2) deviance residuals
 
+```
+
+##Before we move one let's see if a negative binomial model can fix our problems
+
+```{r}
 #Negative Binomial 
 
 mod.nb <- glm.nb(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba)
@@ -57,20 +110,14 @@ residualPlots(mod.nb, type = "deviance", tests = FALSE)
 
 #Still similar to the previous regular models
 #I guess we need to try and fit a different type of model...
+```
 
-#Now we will take a look at some models that can hopefully handle the large number of zeros in our data
-#The model types that we will investigate are the hurdle and zero inflated model
-
-
-
-#testing zero inflated model
-
-mod <- zeroinfl(Playoff_Wins ~ DRB, data = nba, dist = "negbin")
-summary(mod)
-
+##Now we will take a look at some models that can hopefully handle the large number of zeros in our data
+##The model types that we will investigate are the hurdle and zero inflated model
 
 #start fitting hurdle models using BIC
 
+```{r}
 mod.hur <- hurdle(Playoff_Wins ~ FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "poisson")
 summary(mod.hur)
 hur.basic <- hurdle(Playoff_Wins ~ 1, data = nba, dist = "poisson")
@@ -87,7 +134,6 @@ summary(hur.stepNoCompAIC)
 hur.stepBk <- stepAIC(mod.hur, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both", k = log(nrow(nba)))
 summary(hur.stepBk)
 
-#No off or def rating
 hur.full <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "poisson")
 summary(hur.full)
 hur.BK <-stepAIC(hur.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both", k = log(nrow(nba)))
@@ -98,17 +144,21 @@ summary(hur.fwd)
 
 hur.bw <- stepAIC(hur.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "backward", k = log(nrow(nba)))
 summary(hur.fwd)
+```
 
 #Re-Fit the model using AIC
 
+```{r}
 hur.AIC <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both")
 summary(hur.AIC)
 
 hur.FAIC <- stepAIC(hur.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both")
 summary(hur.FAIC)
+```
 
-#Try negbin dist instead of poisson (BIC)
+#Try negbinomial hurdle model instead of hurdle poisson (BIC)
 
+```{r}
 mod.negbin <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "negbin")
 summary(mod.negbin)
 negbin.basic <- hurdle(Playoff_Wins ~ 1, data = nba, dist = "negbin")
@@ -116,16 +166,15 @@ negbin.basic <- hurdle(Playoff_Wins ~ 1, data = nba, dist = "negbin")
 negbin.step <- stepAIC(negbin.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both", k = log(nrow(nba)))
 summary(negbin.step)
 
-#No off or def rating included 
 negbin.full <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "negbin")
 summary(negbin.full)
 negbin.BK <-stepAIC(negbin.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both", k = log(nrow(nba)))
 summary(negbin.BK)
+```
 
-#Looks like negbin is not going to be useful in this case
+#Check zeroinfl model (using BIC during stepwise selection)
 
-#Check zeroinfl model (BIC)
-
+```{r}
 mod.zero <- zeroinfl(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "poisson")
 summary(mod.zero)
 zero.basic <- zeroinfl(Playoff_Wins ~ 1, data = nba, dist = "poisson")
@@ -134,25 +183,30 @@ zero.basic <- zeroinfl(Playoff_Wins ~ 1, data = nba, dist = "poisson")
 zero.step <- stepAIC(zero.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both", k = log(nrow(nba)))
 summary(zero.step)
 
-#No off or def rating included 
 #the four lines below are error prone 
 zero.full <- zeroinfl(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff, data = nba, dist = "poisson")
 summary(zero.full)
 zero.BK <-stepAIC(zero.full, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff), direction = "both", k = log(nrow(nba)))
 summary(zero.BK)
+```
 
-#quick manual fit (for some function testing)
-zero.test <- zeroinfl(Playoff_Wins ~ FT + ThreeP + STL + TOV, data = nba, dist ="poisson")
-summary(zero.test)
+#fit testing for: zero.BK, zero.step, hur.BK, hur.step, negbin.step, negbin.BK
 
-#fit testing for: zero.BK zero.step hur.BK hur.step
-
+```{r}
 AIC <- c(AIC(zero.BK), AIC(zero.step), AIC(negbin.step), AIC(negbin.BK), AIC(hur.BK), AIC(hur.step))
 plot(AIC)
 
 Loglik <- c(zero.BK$loglik, zero.step$loglik, negbin.step$loglik, negbin.BK$loglik, hur.BK$loglik, hur.step$loglik)
 plot(Loglik)
+```
 
+#In both of the graphs above the model associated with index 6 looks to be the best (in terms of the Loglik and AIC values)
+#The model at index 6 is the hur.step model
+#Based on these graphs we are going to move forward with the hur.step model
+
+#Now we will check for interaction terms using repeated stepwise selection to see if any interaction terms are added to the model
+
+```{r}
 #Check for interactions
 
 hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
@@ -188,17 +242,36 @@ hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + Three
 hur.inter <- stepAIC(hur.basic, scope = list(lower = ~ 1, upper = ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff
                                              + Off_Eff*Conf + ORB*ThreeP + ORB*TwoP + ThreeP*TwoP), direction = "both", k = log(nrow(nba)))
 
-#summary of interaction model (I removed all of summaries I had inbetween each model re-fitting) 
-summary(hur.inter)
-#It looks like Conf*Off_Eff might be significant
 
-#Inspect the models more closely
+```
+
+#summary of interaction model (I removed all of summaries I had inbetween each model re-fitting) 
+
+```{r}
+summary(hur.inter)
+```
+
+#It looks like Conf*Off_Eff might be significant, so the new model we are using is hur.inter
+
+#Now let's inspect our model further to see if its valid
+
+```{r}
+#hur.Finter is a "full" hurdle model that we will use for comparisons
 hur.Finter <- hurdle(Playoff_Wins ~ TwoP + ThreeP + ORB + DRB + FT + AST + STL + BLK + TOV + PF + Conf + Def_Rtg + Off_Eff + Off_Eff*Conf, data = nba, dist = "poisson")
 
-pchisq(2*(hur.inter$loglik - hur.basic$loglik), df = 16, lower.tail = FALSE)
-pchisq(2*(hur.Finter$loglik - hur.inter$loglik), df = 16, lower.tail = FALSE)
-#Permutation test significance
 
+#check to see if our model is a better fit than the full and basic models
+#NULL Hypothesis: more complex model is a better fit
+pchisq(2*(hur.inter$loglik - hur.basic$loglik), df = 16, lower.tail = FALSE)
+#based on the low p val it looks like our model is definetly better than the basic model
+pchisq(2*(hur.Finter$loglik - hur.inter$loglik), df = 16, lower.tail = FALSE)
+#based on the high p val it looks like our model is a better fit than the full model
+```
+
+#Our model isn't looking too bad, but lets use a puesdo cross validation approach to see if our model
+#is more significant than the "full" model when we look at a random 9/10ths of the data
+
+```{r}
 numSim <- 1000
 result <- numeric(numSim)
 for (i in 1:numSim) {
@@ -211,54 +284,38 @@ for (i in 1:numSim) {
 }
 summary(result)
 gf_histogram(~result)
+```
 
+#Re-do the AIC and loglik graphs with the interaction model
 
-#Check BIC and LogLik graphs once again
+```{r}
+AIC2 <- c(AIC(zero.BK), AIC(zero.step), AIC(negbin.step), AIC(negbin.BK), AIC(hur.BK), AIC(hur.step), AIC(hur.inter))
+plot(AIC2)
 
+Loglik2 <- c(zero.BK$loglik, zero.step$loglik, negbin.step$loglik, negbin.BK$loglik, hur.BK$loglik, hur.step$loglik, hur.inter$loglik)
+plot(Loglik2)
+```
 
-BIC <- c(AIC(zero.BK), AIC(zero.step), AIC(negbin.step), AIC(negbin.BK), AIC(hur.BK), AIC(hur.step), AIC(hur.inter))
-plot(BIC)
-
-Loglik <- c(zero.BK$loglik, zero.step$loglik, negbin.step$loglik, negbin.BK$loglik, hur.BK$loglik, hur.step$loglik, hur.inter$loglik)
-plot(Loglik)
-
-
-
-#testing some pca stuff
-
-pca <- PCA(nba[5:14])
-pca$var$coord
-pca$ind$coord
-
-
-#More PCA stuff (begin using PCA to create a predictive model)
-
-prin_comp <- princomp(nba[5:14], scale = TRUE)
-names(prin_comp)
-prin_comp$scores
-
-prin_data = data.frame(PO_Wins = nba$Playoff_Wins, prin_comp$scores)
+#Based on the graphs it looks like the interaction model wins out on the loglik and AIC fronts
 
 
 
-prin.mod <- zeroinfl(PO_Wins ~ Comp.1 + Comp.2 + Comp.3 + Comp.4 + Comp.5 + Comp.6 + Comp.7 + Comp.8 + Comp.10, data = prin_data, dist = "poisson")
-
-summary(prin.mod)
-
-prin.step <- stepAIC(prin.mod, scale = list(lower = ~ 1, upper = ~ Comp.1 + Comp.2 + Comp.3 + Comp.4 + Comp.5 + Comp.6 + Comp.7 + Comp.8 + Comp.9 + Comp.10),
-                    direction = "both", k = log(nrow(prin_data)))
-
-summary(prin.step)
 
 
-##Our Working Model
-OURMODEL <- hurdle(Playoff_Wins ~ Off_Eff+Def_Rtg+Conf+STL+TOV+Off_Eff*Conf,data=nba,dist="poisson")
-##Log-Likelihood testing against saturated Model, our model is more significant
-pchisq(2*(logLik(hur.Finter)-logLik(OURMODEL)),df=16,lower.tail=FALSE)
-summary(OURMODEL)
-##Extracting Std. Errors
-out$coefficients$count[,2]
-out$coefficients$zero[,2]
-predict(OURMODEL,type="count")
-##Correlation Table Data
-table <- cor(correlationdata)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
