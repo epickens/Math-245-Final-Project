@@ -352,6 +352,7 @@ Loglik2 <- c(zero.BK$loglik, zero.step$loglik, negbin.step$loglik, negbin.BK$log
 plot(Loglik2)
 ```
 
+#In the graphs above the interaction model is the model at index 7
 #Based on the graphs it looks like the interaction model wins out on the loglik and AIC fronts
 
 
